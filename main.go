@@ -12,25 +12,26 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/urfave/cli/v2"
 )
 
 var sv *fiber.App
 
 func main() {
-	port := "3000"
-	index, spa := false, false
+	port, list := "", ""
+	index, spa, api := false, false, false
 	wg := &sync.WaitGroup{}
 	app := &cli.App{
 		Name:      "static-server",
 		Usage:     "Start http server with static files!",
 		ArgsUsage: "Path of static files (default: \".\")",
-		Version:   "v1.0.0",
+		Version:   "v1.0.1",
 		Commands:  nil,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "port",
-				Value:       "3000",
+				Value:       "8000",
 				Destination: &port,
 				Aliases:     []string{"p"},
 				Usage:       "listening port of http server",
@@ -47,6 +48,19 @@ func main() {
 				Aliases:     []string{"s"},
 				Usage:       "support SPA mode, this option will be ignored when allowing index",
 			},
+			&cli.BoolFlag{
+				Name:        "api",
+				Destination: &api,
+				Aliases:     []string{"a"},
+				Usage:       "enable proxy for /api, combine with --proxy to config",
+			},
+			&cli.StringFlag{
+				Name:        "proxy",
+				Value:       "http://localhost:3000",
+				Destination: &list,
+				Aliases:     []string{"x"},
+				Usage:       "list of proxy for /api, separated by comma",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			wg.Add(1)
@@ -55,7 +69,7 @@ func main() {
 			colorBlue := "\033[36m"
 			fmt.Println("Server is running at:", colorBlue+"http://localhost:"+port+colorReset)
 			dir := c.Args().Get(0)
-			if err := startServer(dir, ":"+port, index, spa); err != nil {
+			if err := startServer(dir, ":"+port, index, spa, api, list); err != nil {
 				fmt.Println(colorRed + err.Error() + colorReset)
 				return err
 			}
@@ -81,7 +95,7 @@ func main() {
 	wg.Wait()
 }
 
-func startServer(dir, port string, index bool, spa bool) error {
+func startServer(dir, port string, index bool, spa bool, api bool, list string) error {
 	path, err := os.Getwd()
 	if err != nil {
 		return err
@@ -94,6 +108,11 @@ func startServer(dir, port string, index bool, spa bool) error {
 		DisableStartupMessage: true,
 		ReduceMemoryUsage:     true,
 	})
+	if api {
+		sv.Group("/api", proxy.Balancer(proxy.Config{
+			Servers: strings.Split(list, ","),
+		}))
+	}
 	sv.Static("/", path, fiber.Static{
 		Browse: index,
 	})
