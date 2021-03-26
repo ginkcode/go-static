@@ -19,8 +19,8 @@ import (
 var sv *fiber.App
 
 func main() {
-	port, list := "", ""
-	index, spa, api := false, false, false
+	port, list, cert, key := "", "", "", ""
+	index, spa, api, tls := false, false, false, false
 	wg := &sync.WaitGroup{}
 	app := &cli.App{
 		Name:      "static-server",
@@ -61,15 +61,39 @@ func main() {
 				Aliases:     []string{"x"},
 				Usage:       "list of proxy for /api, separated by comma",
 			},
+			&cli.BoolFlag{
+				Name:        "tls",
+				Destination: &tls,
+				Aliases:     []string{"t"},
+				Usage:       "enable tls mode, combine with --cert and --key",
+			},
+			&cli.StringFlag{
+				Name:        "cert",
+				Value:       "cert.pem",
+				Destination: &cert,
+				Aliases:     []string{"c"},
+				Usage:       "path to tls cert",
+			},
+			&cli.StringFlag{
+				Name:        "key",
+				Value:       "key.pem",
+				Destination: &key,
+				Aliases:     []string{"k"},
+				Usage:       "path to private key",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			wg.Add(1)
 			colorReset := "\033[0m"
 			colorRed := "\033[31m"
 			colorBlue := "\033[36m"
-			fmt.Println("Server is running at:", colorBlue+"http://localhost:"+port+colorReset)
+			proto := "http"
+			if tls {
+				proto = "https"
+			}
+			fmt.Println("Server is running at:", colorBlue+proto+"://localhost:"+port+colorReset)
 			dir := c.Args().Get(0)
-			if err := startServer(dir, ":"+port, index, spa, api, list); err != nil {
+			if err := startServer(dir, ":"+port, index, spa, api, list, tls, cert, key); err != nil {
 				fmt.Println(colorRed + err.Error() + colorReset)
 				return err
 			}
@@ -95,7 +119,7 @@ func main() {
 	wg.Wait()
 }
 
-func startServer(dir, port string, index bool, spa bool, api bool, list string) error {
+func startServer(dir, port string, index bool, spa bool, api bool, list string, tlsMode bool, cert, key string) error {
 	path, err := os.Getwd()
 	if err != nil {
 		return err
@@ -129,6 +153,9 @@ func startServer(dir, port string, index bool, spa bool, api bool, list string) 
 			ctx.Set("Content-Type", "text/html")
 			return ctx.SendStream(f)
 		})
+	}
+	if tlsMode {
+		return sv.ListenTLS(port, cert, key)
 	}
 	return sv.Listen(port)
 }
