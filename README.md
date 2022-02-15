@@ -15,7 +15,7 @@ go get -u github.com/ginkcode/go-static
 - Api default proxy: localhost:3000
 
 ```shell
-static-server - Start http server with static files!
+go-static - Start http server with static files!
 
 USAGE:
    go-static [global options] command [command options] Path of static files (default: ".")
