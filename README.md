@@ -3,6 +3,10 @@
 Serving http server with static files, leveraged by `cli` and `gofiber`
 
 ```
+go install github.com/ginkcode/go-static@latest
+```
+Or
+```
 go get -u github.com/ginkcode/go-static
 ```
 
@@ -17,7 +21,7 @@ USAGE:
    go-static [global options] command [command options] Path of static files (default: ".")
 
 VERSION:
-   v1.0.1
+   v1.0.3
 
 COMMANDS:
    help, h  Shows a list of commands or help for one command

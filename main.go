@@ -26,7 +26,7 @@ func main() {
 		Name:      "static-server",
 		Usage:     "Start http server with static files!",
 		ArgsUsage: "Path of static files (default: \".\")",
-		Version:   "v1.0.1",
+		Version:   "v1.0.3",
 		Commands:  nil,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -104,9 +104,13 @@ func main() {
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt)
 		<-stop
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		if err := stopServer(ctx); err != nil {
-			fmt.Println(err.Error())
+			if err.Error() == "timeout" {
+				fmt.Println("Server stopped")
+			} else {
+				fmt.Println(err.Error())
+			}
 		}
 		cancel()
 		wg.Done()
